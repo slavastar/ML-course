@@ -1,7 +1,7 @@
-from math import sqrt
 import math
 
 import pandas as pd
+import numpy
 from matplotlib import pyplot as plt
 
 
@@ -117,6 +117,16 @@ def kernel(kernel_function, u):
         return sigmoid(u)
 
 
+def harmonic_mean(a, b):
+    return divide(2 * a * b, (a + b))
+
+
+def divide(a, b):
+    if b == 0:
+        return 0
+    return a / b
+
+
 def minmax(dataset):
     minmax = list()
     for i in range(len(dataset[0])):
@@ -158,16 +168,45 @@ def predict(dataset, target):
     return result
 
 
+def get_F_score(confusion_matrix):
+    C = []
+    P = []
+    TP = []
+    FP = []
+    FN = []
+    precision = []
+    recall = []
+    F = []
+    for i in range(len(confusion_matrix)):
+        TP.append(confusion_matrix[i][i])
+        row = confusion_matrix[i]
+        column = []
+        for j in range(len(confusion_matrix)):
+            column.append(confusion_matrix[j][i])
+        sum_row = sum(row)
+        sum_column = sum(column)
+        P.append(sum_row)
+        C.append(sum_column)
+        FP.append(sum_row - confusion_matrix[i][i])
+        FN.append(sum_column - confusion_matrix[i][i])
+        precision.append(divide(TP[i], (TP[i] + FP[i])))
+        recall.append(divide(TP[i], (TP[i] + FN[i])))
+        F.append(harmonic_mean(precision[i], recall[i]))
+    return F
+
+
 def regression(dataset):
     min_max = minmax(dataset)
     dataset = normalize(dataset, min_max)
     instances = len(dataset)
     true = false = 0
+    confusion_matrix = [[0 for j in range(len(classes))] for i in range(len(classes))]
     for i in range(len(dataset)):
         dataset_train = dataset.copy()
         dataset_test = dataset_train.pop(i)
         prediction = round(predict(dataset_train, dataset_test[0:len(dataset_test) - 1]))
         real = dataset_test[len(dataset_test) - 1]
+        confusion_matrix[number_to_index[prediction]][number_to_index[real]] += 1
         if prediction == real:
             true += 1
         else:
@@ -176,6 +215,8 @@ def regression(dataset):
     print("Instances: " + str(instances))
     print("True: " + str(true))
     print("False: " + str(false))
+    print(confusion_matrix)
+    print(get_F_score(confusion_matrix))
 
 
 def vectorize_dataset(dataset):
@@ -188,6 +229,13 @@ mapping = {
     'B': 2.0,
     'R': 3.0
 }
+
+number_to_index = {
+    1.0: 0,
+    2.0: 1,
+    3.0: 2
+}
+
 distance_function = 'euclidean'
 kernel_function = 'cosine'
 neighbors = 4
