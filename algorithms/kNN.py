@@ -5,35 +5,26 @@ import numpy
 from matplotlib import pyplot as plt
 
 
-def minkowski_distance(x, y, p):
+def minkowski(x, y, p):
     distance = 0
     for i in range(len(x)):
         distance += abs(x[i] - y[i])**p
     return distance**(1 / p)
 
 
-def manhattan_distance(x, y):
-    return minkowski_distance(x, y, 1)
+def manhattan(x, y):
+    return minkowski(x, y, 1)
 
 
-def euclidean_distance(x, y):
-    return minkowski_distance(x, y, 2)
+def euclidean(x, y):
+    return minkowski(x, y, 2)
 
 
-def chebyshev_distance(x, y):
+def chebyshev(x, y):
     distance = 0
     for i in range(len(x)):
         distance = max(distance, abs(x[i] - y[i]))
     return distance
-
-
-def distance(distance_function, x, y):
-    if distance_function == 'manhattan':
-        return manhattan_distance(x, y)
-    elif distance_function == 'euclidean':
-        return euclidean_distance(x, y)
-    elif distance_function == 'chebyshev':
-        return chebyshev_distance(x, y)
 
 
 def bad_argument(u):
@@ -94,29 +85,6 @@ def sigmoid(u):
     return 2 / math.pi / (math.e**u + math.pi**(-u))
 
 
-def kernel(kernel_function, u):
-    if kernel_function == 'uniform':
-        return uniform(u)
-    elif kernel_function == 'triangular':
-        return triangular(u)
-    elif kernel_function == 'epanechnikov':
-        return epanechnikov(u)
-    elif kernel_function == 'quartic':
-        return quartic(u)
-    elif kernel_function == 'triweight':
-        return triweight(u)
-    elif kernel_function == 'tricube':
-        return tricube(u)
-    elif kernel_function == 'gaussian':
-        return gaussian(u)
-    elif kernel_function == 'cosine':
-        return cosine(u)
-    elif kernel_function == 'logistic':
-        return logistic(u)
-    elif kernel_function == 'sigmoid':
-        return sigmoid(u)
-
-
 def harmonic_mean(a, b):
     return divide(2 * a * b, (a + b))
 
@@ -156,12 +124,12 @@ def normalize_vector(vector, minmax):
     return normalized_vector
 
 
-def predict(dataset, target):
-    sorted_dataset = sorted(dataset, key=lambda row: distance(distance_function, row[0:len(row) - 1], target))
+def predict(dataset, target, distance_function, kernel_function):
+    sorted_dataset = sorted(dataset, key=lambda row: distance_function(row[0:len(row) - 1], target))
     numerator = 0
     denominator = 0
     for j in range(neighbors):
-        kernel_value = kernel(kernel_function, j / h)
+        kernel_value = kernel_function(j / h)
         numerator += sorted_dataset[j][features] * kernel_value
         denominator += kernel_value
     result = numerator / denominator
@@ -195,7 +163,7 @@ def get_F_score(confusion_matrix):
     return F
 
 
-def regression(dataset):
+def regression(dataset, distance_function, kernel_function):
     min_max = minmax(dataset)
     dataset = normalize(dataset, min_max)
     instances = len(dataset)
@@ -204,7 +172,7 @@ def regression(dataset):
     for i in range(len(dataset)):
         dataset_train = dataset.copy()
         dataset_test = dataset_train.pop(i)
-        prediction = round(predict(dataset_train, dataset_test[0:len(dataset_test) - 1]))
+        prediction = round(predict(dataset_train, dataset_test[0:len(dataset_test) - 1], distance_function, kernel_function))
         real = dataset_test[len(dataset_test) - 1]
         confusion_matrix[number_to_index[prediction]][number_to_index[real]] += 1
         if prediction == real:
@@ -236,8 +204,6 @@ number_to_index = {
     3.0: 2
 }
 
-distance_function = 'euclidean'
-kernel_function = 'cosine'
 neighbors = 4
 h = neighbors
 classes = [1.0, 2.0, 3.0]
@@ -246,4 +212,4 @@ data = pd.read_csv(filename)
 dataset = data.values
 features = len(dataset[0]) - 1
 vectorize_dataset(dataset)
-regression(dataset)
+regression(dataset, euclidean, cosine)
