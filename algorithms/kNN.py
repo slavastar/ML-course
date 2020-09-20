@@ -5,6 +5,11 @@ import numpy
 from matplotlib import pyplot as plt
 
 
+def print_matrix(matrix):
+    for row in matrix:
+        print(row)
+
+
 def minkowski(x, y, p):
     distance = 0
     for i in range(len(x)):
@@ -130,7 +135,7 @@ def predict(dataset, target, distance_function, kernel_function, h):
     denominator = 0
     for j in range(neighbors):
         kernel_value = kernel_function(j / h)
-        numerator += sorted_dataset[j][features] * kernel_value
+        numerator += sorted_dataset[j][len(dataset[0]) - 1] * kernel_value
         denominator += kernel_value
     result = numerator / denominator
     return result
@@ -194,9 +199,6 @@ def regression(dataset, distance_function, kernel_function, h):
     print("h: " + str(h))
     print("True: " + str(true))
     print("False: " + str(false))
-    # print("Confusion matrix:")
-    # for row in confusion_matrix:
-    #     print(row)
     F_score = get_F_score(confusion_matrix)
     print("F score: " + str(F_score))
     return F_score
@@ -204,7 +206,56 @@ def regression(dataset, distance_function, kernel_function, h):
 
 def vectorize_dataset(dataset):
     for i in range(len(dataset)):
-        dataset[i][features] = mapping[dataset[i][features]]
+        dataset[i][len(dataset[0]) - 1] = mapping[dataset[i][len(dataset[0]) - 1]]
+
+
+def one_hot_transformation(dataset):
+    new_dataset = []
+    for row in dataset:
+        new_dataset.append(list(row))
+        for i in range(3):
+            if i == number_to_index[row[len(dataset[0]) - 1]]:
+                value = 1.0
+            else:
+                value = 0.0
+            new_dataset[len(new_dataset) - 1].insert(len(dataset[0]) - 1 + i, value)
+    return list(new_dataset)
+
+
+# best combination: euclidean, triweight, h = 25
+def find_best_combination(dataset):
+    distance_functions = [manhattan, euclidean]
+    kernel_functions = [uniform, triangular, epanechnikov, quartic, triweight,
+                        tricube, gaussian, cosine, logistic, sigmoid]
+    max_F_score = 0
+    best_combination = []
+    for distance_function in distance_functions:
+        for kernel_function in kernel_functions:
+            for h_value in [neighbors]:
+                F_score = regression(dataset, distance_function, kernel_function, h_value)
+                if F_score >= max_F_score:
+                    max_F_score = F_score
+                    best_combination = [distance_function, kernel_function, h_value]
+    print("=============")
+    print("Max F score: " + str(max_F_score))
+    print("Best combination: " + str(best_combination))
+    return best_combination
+
+
+def draw_graph(x_values, y_values):
+    plt.plot(x_values, y_values, 'ro')
+    plt.xlabel("Ширина окна")
+    plt.ylabel("F-мера")
+    plt.show()
+
+
+def build_graph(dataset, distance_function, kernel_function):
+    h_values = [(neighbors + i) for i in range(0, 20)]
+    F_scores = []
+    for h_value in h_values:
+        F_score = regression(dataset, distance_function, kernel_function, h_value)
+        F_scores.append(F_score)
+    draw_graph(h_values, F_scores)
 
 
 mapping = {
@@ -219,26 +270,19 @@ number_to_index = {
     3.0: 2
 }
 
-distance_functions = [manhattan, euclidean]
-kernel_functions = [uniform, triangular, epanechnikov, quartic, triweight, tricube, gaussian, cosine, logistic, sigmoid]
+number_to_list = {
+    1.0: [1, 0, 0],
+    2.0: [0, 1, 0],
+    3.0: [0, 0, 1]
+}
 
 neighbors = 25
 classes = [1.0, 2.0, 3.0]
 filename = 'data.csv'
 data = pd.read_csv(filename)
 dataset = data.values
-features = len(dataset[0]) - 1
 instances = len(dataset)
 vectorize_dataset(dataset)
-max_F_score = 0
-best_combination = []
-for distance_function in distance_functions:
-    for kernel_function in kernel_functions:
-        for h_value in [neighbors]:
-            F_score = regression(dataset, distance_function, kernel_function, h_value)
-            if F_score >= max_F_score:
-                max_F_score = F_score
-                best_combination = [distance_function, kernel_function, h_value]
-print("=============")
-print("Max F score: " + str(max_F_score))
-print("Best combination: " + str(best_combination))
+build_graph(dataset, euclidean, gaussian)
+# new_dataset = numpy.asarray(one_hot_transformation(dataset))
+# find_best_combination(new_dataset)
