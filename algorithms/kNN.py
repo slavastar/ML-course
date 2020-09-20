@@ -124,7 +124,7 @@ def normalize_vector(vector, minmax):
     return normalized_vector
 
 
-def predict(dataset, target, distance_function, kernel_function):
+def predict(dataset, target, distance_function, kernel_function, h):
     sorted_dataset = sorted(dataset, key=lambda row: distance_function(row[0:len(row) - 1], target))
     numerator = 0
     denominator = 0
@@ -145,6 +145,9 @@ def get_F_score(confusion_matrix):
     precision = []
     recall = []
     F = []
+    micro_F = 0
+    precision_w = 0
+    recall_w = 0
     for i in range(len(confusion_matrix)):
         TP.append(confusion_matrix[i][i])
         row = confusion_matrix[i]
@@ -160,19 +163,25 @@ def get_F_score(confusion_matrix):
         precision.append(divide(TP[i], (TP[i] + FP[i])))
         recall.append(divide(TP[i], (TP[i] + FN[i])))
         F.append(harmonic_mean(precision[i], recall[i]))
-    return F
+        micro_F += C[i] * F[i]
+        precision_w += divide(TP[i] * C[i], P[i])
+        recall_w += TP[i]
+    micro_F /= instances
+    precision_w /= instances
+    recall_w /= instances
+    macro_F = harmonic_mean(precision_w, recall_w)
+    return macro_F
 
 
-def regression(dataset, distance_function, kernel_function):
+def regression(dataset, distance_function, kernel_function, h):
     min_max = minmax(dataset)
     dataset = normalize(dataset, min_max)
-    instances = len(dataset)
     true = false = 0
     confusion_matrix = [[0 for j in range(len(classes))] for i in range(len(classes))]
     for i in range(len(dataset)):
         dataset_train = dataset.copy()
         dataset_test = dataset_train.pop(i)
-        prediction = round(predict(dataset_train, dataset_test[0:len(dataset_test) - 1], distance_function, kernel_function))
+        prediction = round(predict(dataset_train, dataset_test[0:len(dataset_test) - 1], distance_function, kernel_function, h))
         real = dataset_test[len(dataset_test) - 1]
         confusion_matrix[number_to_index[prediction]][number_to_index[real]] += 1
         if prediction == real:
@@ -180,11 +189,17 @@ def regression(dataset, distance_function, kernel_function):
         else:
             false += 1
     print("----------")
-    print("Instances: " + str(instances))
+    print("Distance: " + str(distance_function.__name__))
+    print("Kernel: " + str(kernel_function.__name__))
+    print("h: " + str(h))
     print("True: " + str(true))
     print("False: " + str(false))
-    print(confusion_matrix)
-    print(get_F_score(confusion_matrix))
+    # print("Confusion matrix:")
+    # for row in confusion_matrix:
+    #     print(row)
+    F_score = get_F_score(confusion_matrix)
+    print("F score: " + str(F_score))
+    return F_score
 
 
 def vectorize_dataset(dataset):
@@ -204,12 +219,26 @@ number_to_index = {
     3.0: 2
 }
 
-neighbors = 4
-h = neighbors
+distance_functions = [manhattan, euclidean]
+kernel_functions = [uniform, triangular, epanechnikov, quartic, triweight, tricube, gaussian, cosine, logistic, sigmoid]
+
+neighbors = 25
 classes = [1.0, 2.0, 3.0]
-filename = 'data2.csv'
+filename = 'data.csv'
 data = pd.read_csv(filename)
 dataset = data.values
 features = len(dataset[0]) - 1
+instances = len(dataset)
 vectorize_dataset(dataset)
-regression(dataset, euclidean, cosine)
+max_F_score = 0
+best_combination = []
+for distance_function in distance_functions:
+    for kernel_function in kernel_functions:
+        for h_value in [neighbors]:
+            F_score = regression(dataset, distance_function, kernel_function, h_value)
+            if F_score >= max_F_score:
+                max_F_score = F_score
+                best_combination = [distance_function, kernel_function, h_value]
+print("=============")
+print("Max F score: " + str(max_F_score))
+print("Best combination: " + str(best_combination))
