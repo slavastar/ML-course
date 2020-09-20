@@ -32,42 +32,42 @@ def chebyshev(x, y):
     return distance
 
 
-def bad_argument(u):
+def check_argument(u):
     return abs(u) >= 1
 
 
 def uniform(u):
-    if bad_argument(u):
+    if check_argument(u):
         return 0
     return 0.5
 
 
 def triangular(u):
-    if bad_argument(u):
+    if check_argument(u):
         return 0
     return 1 - abs(u)
 
 
 def epanechnikov(u):
-    if bad_argument(u):
+    if check_argument(u):
         return 0
     return 3 / 4 * (1 - u**2)
 
 
 def quartic(u):
-    if bad_argument(u):
+    if check_argument(u):
         return 0
     return 15 / 16 * (1 - u**2)**2
 
 
 def triweight(u):
-    if bad_argument(u):
+    if check_argument(u):
         return 0
     return 35 / 32 * (1 - u**2)**3
 
 
 def tricube(u):
-    if bad_argument(u):
+    if check_argument(u):
         return 0
     return 70 / 81 * (1 - abs(u)**3)**3
 
@@ -77,7 +77,7 @@ def gaussian(u):
 
 
 def cosine(u):
-    if bad_argument(u):
+    if check_argument(u):
         return 0
     return math.pi / 4 * math.cos(math.pi / 2 * u)
 
@@ -129,15 +129,25 @@ def normalize_vector(vector, minmax):
     return normalized_vector
 
 
-def predict(dataset, target, distance_function, kernel_function, h):
+def predict(dataset, target, distance_function, kernel_function, neighbors, h):
     sorted_dataset = sorted(dataset, key=lambda row: distance_function(row[0:len(row) - 1], target))
-    numerator = 0
-    denominator = 0
-    for j in range(neighbors):
-        kernel_value = kernel_function(j / h)
-        numerator += sorted_dataset[j][len(dataset[0]) - 1] * kernel_value
-        denominator += kernel_value
-    result = numerator / denominator
+    if isinstance(sorted_dataset[0][len(dataset[0]) - 1], list):
+        numerator = [0 for i in range(len(sorted_dataset[0][len(dataset[0]) - 1]))]
+        denominator = 0
+        for j in range(neighbors):
+            kernel_value = kernel_function(j / h)
+            vector = sorted_dataset[j][len(dataset[0]) - 1]
+            numerator = [numerator[i] + vector[i] * kernel_value for i in range(len(numerator))]
+            denominator += kernel_value
+        result_vector = [numerator[i] / denominator for i in range(len(numerator))]
+        result = result_vector.index(max(result_vector)) + 1
+    else:
+        numerator = denominator = 0
+        for j in range(neighbors):
+            kernel_value = kernel_function(j / h)
+            numerator += sorted_dataset[j][len(dataset[0]) - 1] * kernel_value
+            denominator += kernel_value
+        result = numerator / denominator
     return result
 
 
@@ -178,7 +188,7 @@ def get_F_score(confusion_matrix):
     return macro_F
 
 
-def regression(dataset, distance_function, kernel_function, h):
+def regression(dataset, distance_function, kernel_function, neighbors, h):
     min_max = minmax(dataset)
     dataset = normalize(dataset, min_max)
     true = false = 0
@@ -186,8 +196,10 @@ def regression(dataset, distance_function, kernel_function, h):
     for i in range(len(dataset)):
         dataset_train = dataset.copy()
         dataset_test = dataset_train.pop(i)
-        prediction = round(predict(dataset_train, dataset_test[0:len(dataset_test) - 1], distance_function, kernel_function, h))
+        prediction = round(predict(dataset_train, dataset_test[0:len(dataset_test) - 1], distance_function, kernel_function, neighbors, h))
         real = dataset_test[len(dataset_test) - 1]
+        if isinstance(real, list):
+            real = real.index(max(real)) + 1
         confusion_matrix[number_to_index[prediction]][number_to_index[real]] += 1
         if prediction == real:
             true += 1
@@ -210,29 +222,23 @@ def vectorize_dataset(dataset):
 
 
 def one_hot_transformation(dataset):
-    new_dataset = []
-    for row in dataset:
-        new_dataset.append(list(row))
-        for i in range(3):
-            if i == number_to_index[row[len(dataset[0]) - 1]]:
-                value = 1.0
-            else:
-                value = 0.0
-            new_dataset[len(new_dataset) - 1].insert(len(dataset[0]) - 1 + i, value)
-    return list(new_dataset)
+    new_dataset = dataset.copy()
+    for i in range(len(new_dataset)):
+        new_dataset[i][len(new_dataset[i]) - 1] = number_to_vector[new_dataset[i][len(new_dataset[i]) - 1]]
+    return new_dataset
 
 
 # best combination: euclidean, triweight, h = 25
-def find_best_combination(dataset):
-    distance_functions = [manhattan, euclidean]
+def find_best_combination(dataset, neighbors):
+    distance_functions = [manhattan, euclidean, chebyshev]
     kernel_functions = [uniform, triangular, epanechnikov, quartic, triweight,
                         tricube, gaussian, cosine, logistic, sigmoid]
     max_F_score = 0
     best_combination = []
     for distance_function in distance_functions:
         for kernel_function in kernel_functions:
-            for h_value in [neighbors]:
-                F_score = regression(dataset, distance_function, kernel_function, h_value)
+            for h_value in range(1, 2):
+                F_score = regression(dataset, distance_function, kernel_function, neighbors, h_value)
                 if F_score >= max_F_score:
                     max_F_score = F_score
                     best_combination = [distance_function, kernel_function, h_value]
@@ -242,20 +248,29 @@ def find_best_combination(dataset):
     return best_combination
 
 
-def draw_graph(x_values, y_values):
+def draw_graph(x_values, y_values, x_name, y_name):
     plt.plot(x_values, y_values, 'ro')
-    plt.xlabel("Ширина окна")
-    plt.ylabel("F-мера")
+    plt.xlabel(x_name)
+    plt.ylabel(y_name)
     plt.show()
 
 
-def build_graph(dataset, distance_function, kernel_function):
-    h_values = [(neighbors + i) for i in range(0, 20)]
+def build_F_of_h_graph(dataset, distance_function, kernel_function, neighbors):
+    h_values = [i for i in range(1, 51)]
     F_scores = []
-    for h_value in h_values:
-        F_score = regression(dataset, distance_function, kernel_function, h_value)
+    for h_value in range(1, 51):
+        F_score = regression(dataset, distance_function, kernel_function, neighbors, h_value)
         F_scores.append(F_score)
-    draw_graph(h_values, F_scores)
+    draw_graph(h_values, F_scores, 'Ширина окна', 'F-мера')
+
+
+def build_F_of_neighbors_graph(dataset, distance_function, kernel_function, h_value):
+    neighbors_values = [i for i in range(1, 51)]
+    F_scores = []
+    for neighbors_value in neighbors_values:
+        F_score = regression(dataset, distance_function, kernel_function, neighbors_value, h_value)
+        F_scores.append(F_score)
+    draw_graph(neighbors_values, F_scores, 'Количество соседей', 'F-мера')
 
 
 mapping = {
@@ -270,19 +285,19 @@ number_to_index = {
     3.0: 2
 }
 
-number_to_list = {
+number_to_vector = {
     1.0: [1, 0, 0],
     2.0: [0, 1, 0],
     3.0: [0, 0, 1]
 }
 
-neighbors = 25
 classes = [1.0, 2.0, 3.0]
 filename = 'data.csv'
 data = pd.read_csv(filename)
 dataset = data.values
 instances = len(dataset)
 vectorize_dataset(dataset)
-build_graph(dataset, euclidean, gaussian)
+build_F_of_h_graph(dataset, euclidean, triweight, neighbors=25)
+build_F_of_neighbors_graph(dataset, euclidean, triweight, h_value=30)
 # new_dataset = numpy.asarray(one_hot_transformation(dataset))
-# find_best_combination(new_dataset)
+# find_best_combination(dataset)
