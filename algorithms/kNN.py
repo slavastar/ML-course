@@ -252,9 +252,10 @@ def find_best_combination(dataset):
             for is_variable in [True, False]:
                 if is_variable:
                     windows = [i for i in range(10, 40, 10)]
+                    windows = []
                 else:
                     windows = [0.1 * i for i in range(0, 10)]
-                    windows = []
+                    windows = [0.35]
                 for window in windows:
                     F_score = regression(dataset, distance_function, kernel_function, window, is_variable)
                     if F_score >= max_F_score:
