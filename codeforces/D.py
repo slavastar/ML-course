@@ -2,56 +2,59 @@ from math import e, log2, log
 import random
 
 
-def H(M):
-    return max(-M, 0)
+def print_X(X):
+    for row in X:
+        print(row)
 
 
-def H_derivative(M):
-    if M < 0:
-        return -1
-    return 0
+def minmax_X(X):
+    minmax = list()
+    for i in range(len(X[0])):
+        min_value = max_value = X[0][i]
+        for j in range(1, len(X)):
+            if X[j][i] > max_value:
+                max_value = X[j][i]
+            elif X[j][i] < min_value:
+                min_value = X[j][i]
+        minmax.append([min_value, max_value])
+    return minmax
 
 
-def V(M):
-    return max(1 - M, 0)
+def normalize_X(X, minmax):
+    normalized_X = []
+    for j in range(len(X)):
+        row = []
+        for i in range(len(X[0])):
+            row.append(float((X[j][i] - minmax[i][0]) / (minmax[i][1] - minmax[i][0])))
+        normalized_X.append(list(row))
+    return normalized_X
 
 
-def V_derivative(M):
-    if M > 1:
-        return -1
-    return 0
+def minmax_Y(Y):
+    return min(Y), max(Y)
 
 
-def L(M):
-    return log2(1 + e ** (-M))
+def normalize_Y(Y):
+    min_value, max_value = minmax_Y(Y)
+    normalized_Y = []
+    for i in range(len(Y)):
+        normalized_Y.append(float((Y[i] - min_value) / (max_value - min_value)))
+    return normalized_Y
 
 
-def L_derivative(M):
-    return -(e ** (-M)) / ((1 + e ** (-M)) * log(2))
+def initialise_weights():
+    b = random.uniform(-0.5 / objects, 0.5 / objects)
+    w = []
+    for i in range(features):
+        w.append(random.uniform(-0.5 / objects, 0.5 / objects))
+    return w, b
 
 
-def Q(M):
-    return (1 - M) ** 2
-
-
-def Q_derivative(M):
-    return 2 * (M - 1)
-
-
-def S(M):
-    return 2 / (1 + e ** M)
-
-
-def S_derivative(M):
-    return -2 * (1 + e ** M) ** -2 * e ** M
-
-
-def E(M):
-    return e ** (-M)
-
-
-def E_derivative(M):
-    return - (e ** (-M))
+def are_vectors_similar(a, b):
+    for i in range(len(a)):
+        if abs(a[i] - b[i]) > 0.000001:
+            return False
+    return True
 
 
 def scalar_product(a, b):
@@ -61,80 +64,68 @@ def scalar_product(a, b):
     return result
 
 
-def subtract(a, b):
-    c = []
-    for i in range(len(a)):
-        c.append(a[i] - b[i])
-    return c
+def MSE(y_predict, y_real):
+    return (y_predict - y_real) ** 2
 
 
-def multiply(const, a):
-    return [const * component for component in a]
+def MSE_derivative(y_predict, y_real):
+    return 2 * (y_predict - y_real)
 
 
-def margin(w, x, y):
-    return scalar_product(w, x) * y
+def SGD(X, Y):
+    w, b = initialise_weights()
 
+    # initialise Q
+    Q = 0
+    for i in range(objects):
+        Q += MSE(scalar_product(w, X[i]), Y[i])
+    Q /= objects
 
-def initialize_weights(option):
-    if option == 1:
-        return [random.uniform(-0.5 / m, 0.5 / m) for i in range(m + 1)]
-    elif option == 2:
-        return [0 for i in range(m + 1)]
-
-
-def initialize_loss_value(w, X, Y, loss_function):
-    result = 0
-    for i in range(n):
-        result += loss_function(margin(w, X[i], Y[i]))
-    return result / n
-
-
-# w, x - vector
-# y, h - number
-def gradient_step(w, x, y, loss_function, h):
-    return subtract(w, multiply(h * derivative[loss_function](margin(w, x, y)) * y, x))
-
-
-def stochastic_gradient(X, Y, loss_function):
-    w = initialize_weights(1)
-    q = initialize_loss_value(w, X, Y, loss_function)
+    learning_rate = 0
+    alpha = 0.05
     iterations = 0
-    while iterations < 2000:
-        c = 3
-        print("Iteration =", iterations, "\tq =", round(q, c), "\t w =", [round(element, c) for element in w])
+    batch_size = min(4, objects)
+    while True:
         iterations += 1
-        h = 1 / iterations
-        i = random.randint(0, len(X) - 1)
-        x, y = X[i], Y[i]
-        eps = loss_function(margin(w, x, y))
-        w = gradient_step(w, x, y, loss_function, h)
-        alpha = 1 / 2
-        q_next = (1 - alpha) * q + alpha * eps
-        delta_q = abs(q - q_next)
-        if delta_q < 0.03:
+        index = random.randint(0, objects - 1)
+        x, y_real = X[index], Y[index]
+        y_predict = b + scalar_product(w, x)
+        loss_value = MSE(y_predict, y_real)
+
+        # update weights
+        learning_rate = 1 / iterations
+        MSE_derivative_value = MSE_derivative(y_predict, y_real)
+        b = b - 2 * learning_rate * MSE_derivative_value
+        w_previous = w.copy()
+        for i in range(features):
+            w[i] = w[i] - learning_rate * MSE_derivative_value * x[i]
+        print("iteration", iterations, "\tloss value", round(loss_value, 4), "b =", round(b, 4), "\tw =", w)
+
+        Q_previous = Q
+        Q = (1 - alpha) * Q + alpha * loss_value
+        if iterations == 2000 or (iterations > 10 and are_vectors_similar(w_previous, w) or abs(Q - Q_previous) < 0.00001):
             break
-        q = q_next
-    return w
+    return w, b
 
 
-derivative = {
-    H: H_derivative,
-    V: V_derivative,
-    L: L_derivative,
-    Q: Q_derivative,
-    S: S_derivative,
-    E: E_derivative
-}
-
-
-n, m = map(int, input().split())
+objects, features = map(int, input().split())
 X = []
 Y = []
-for i in range(n):
-    line = [1]
-    line.extend(list(map(int, input().split())))
+for i in range(objects):
+    line = list(map(int, input().split()))
     Y.append(line.pop(len(line) - 1))
     X.append(line)
-w = stochastic_gradient(X, Y, S)
-print(w)
+normalized_X = normalize_X(X, minmax_X(X))
+normalized_Y = normalize_Y(Y)
+print("X")
+print_X(X)
+print("Y")
+print(Y)
+print("Normalized X")
+print_X(normalized_X)
+print("Normalized Y")
+print(normalized_Y)
+w, b = SGD(X, Y)
+# w, b = SGD(normalized_X, normalized_Y)
+print("Result")
+print("b =", b, "\tw =", w)
