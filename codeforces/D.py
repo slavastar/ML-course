@@ -2,6 +2,15 @@ from math import e, log2, log
 import random
 
 
+def SMAPE(X, Y, w, b):
+    result = 0
+    for i in range(objects):
+        y_predict = b + scalar_product(w, X[i])
+        y_real = Y[i]
+        result += abs(y_predict - y_real) / (abs(y_predict) + abs(y_real))
+    return result * 200 / objects
+
+
 def print_X(X):
     for row in X:
         print(row)
@@ -81,25 +90,32 @@ def SGD(X, Y):
         Q += MSE(scalar_product(w, X[i]), Y[i])
     Q /= objects
 
-    learning_rate = 0
     alpha = 0.05
     iterations = 0
-    batch_size = min(4, objects)
+    batch_size = min(1, objects)
     while True:
         iterations += 1
-        index = random.randint(0, objects - 1)
-        x, y_real = X[index], Y[index]
-        y_predict = b + scalar_product(w, x)
-        loss_value = MSE(y_predict, y_real)
+        learning_rate = 0.003
+        indices = random.sample(range(0, objects), batch_size)
+        total_w = [0] * features
+        total_b = 0
+        total_loss_value = 0
+        for index in indices:
+            x, y_real = X[index], Y[index]
+            y_predict = b + scalar_product(w, x)
+            total_loss_value += MSE(y_predict, y_real)
+            # update weights
+            MSE_derivative_value = MSE_derivative(y_predict, y_real)
+            total_b += learning_rate * MSE_derivative_value
+            for i in range(features):
+                total_w[i] += learning_rate * MSE_derivative_value * x[i]
 
-        # update weights
-        learning_rate = 1 / iterations
-        MSE_derivative_value = MSE_derivative(y_predict, y_real)
-        b = b - 2 * learning_rate * MSE_derivative_value
+        loss_value = total_loss_value / batch_size
+        b -= total_b / batch_size
         w_previous = w.copy()
         for i in range(features):
-            w[i] = w[i] - learning_rate * MSE_derivative_value * x[i]
-        print("iteration", iterations, "\tloss value", round(loss_value, 4), "b =", round(b, 4), "\tw =", w)
+            w[i] -= total_w[i] / batch_size
+        # print("iteration", iterations, "\tloss value =", round(loss_value, 4), "b =", round(b, 4), "\tw =", w)
 
         Q_previous = Q
         Q = (1 - alpha) * Q + alpha * loss_value
@@ -117,15 +133,19 @@ for i in range(objects):
     X.append(line)
 normalized_X = normalize_X(X, minmax_X(X))
 normalized_Y = normalize_Y(Y)
-print("X")
-print_X(X)
-print("Y")
-print(Y)
-print("Normalized X")
-print_X(normalized_X)
-print("Normalized Y")
-print(normalized_Y)
+# print("X")
+# print_X(X)
+# print("Y")
+# print(Y)
+# print("Normalized X")
+# print_X(normalized_X)
+# print("Normalized Y")
+# print(normalized_Y)
 w, b = SGD(X, Y)
+for component in w:
+    print(component)
+print(b)
 # w, b = SGD(normalized_X, normalized_Y)
-print("Result")
-print("b =", b, "\tw =", w)
+# print("Result")
+# print("b =", b, "\tw =", w)
+# print("SMAPE =", SMAPE(X, Y, w, b), "%")
