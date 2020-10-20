@@ -2,6 +2,12 @@ from math import e, log2, log
 import random
 
 
+def print_answer(w, b):
+    for element in w:
+        print(element)
+    print(b)
+
+
 def SMAPE(X, Y, w, b):
     result = 0
     for i in range(objects):
@@ -23,7 +29,7 @@ def minmax_X(X):
         for j in range(1, len(X)):
             if X[j][i] > max_value:
                 max_value = X[j][i]
-            elif X[j][i] < min_value:
+            if X[j][i] < min_value:
                 min_value = X[j][i]
         minmax.append([min_value, max_value])
     return minmax
@@ -49,6 +55,24 @@ def normalize_Y(Y):
     for i in range(len(Y)):
         normalized_Y.append(float((Y[i] - min_value) / (max_value - min_value)))
     return normalized_Y
+
+
+def denormalize_weights(normalized_w, normalized_b, minmax_X, minmax_Y):
+    w = []
+    x_min, x_max = minmax_X[0][0], minmax_X[0][1]
+    for minmax in minmax_X:
+        if x_min > minmax[0]:
+            x_min = minmax[0]
+        if x_max < minmax[1]:
+            x_max = minmax[1]
+    x_scale = x_max - x_min
+    y_scale = minmax_Y[1] - minmax_Y[0]
+    for i in range(features):
+        w.append(normalized_w[i] * y_scale / x_scale)
+    b = y_scale / x_scale * normalized_b + minmax_Y[0]
+    for i in range(features):
+        b -= minmax_X[i][0] * y_scale / x_scale * normalized_w[i]
+    return w, b
 
 
 def initialise_weights():
@@ -81,21 +105,59 @@ def MSE_derivative(y_predict, y_real):
     return 2 * (y_predict - y_real)
 
 
-def SGD(X, Y):
-    w, b = initialise_weights()
+def f(y_predict, y_real):
+    return abs(y_predict - y_real)
 
-    # initialise Q
+
+def f_derivative(y_predict, y_real):
+    if y_predict > y_real:
+        return 1
+    elif y_predict < y_real:
+        return -1
+    else:
+        return 0
+
+
+def vector_length(vector):
+    length = 0
+    for component in vector:
+        length += component ** 2
+    return length ** 0.5
+
+
+def vector_length_squared(vector):
+    return vector_length(vector) ** 2
+
+
+loss_functions = {
+    1: [MSE, MSE_derivative],
+    2: [f, f_derivative]
+}
+
+
+def SGD(X, Y, loss_function, tau=0, max_number_of_iterations=1):
+    # parameters
+    alpha = 0.05
+    batch_size = min(1, objects)
+
+    # initialisation
     Q = 0
     for i in range(objects):
-        Q += MSE(scalar_product(w, X[i]), Y[i])
+        Q += loss_function[0](scalar_product(w, X[i]), Y[i])
     Q /= objects
+    w, b = initialise_weights()
 
-    alpha = 0.05
+    # finding max value in X
+    minmax = minmax_X(X)
+    max_value = 0
+    for minmax_element in minmax:
+        if minmax_element[1] > max_value:
+            max_value = minmax_element[1]
+
     iterations = 0
-    batch_size = min(1, objects)
-    while True:
+    while iterations < max_number_of_iterations:
         iterations += 1
-        learning_rate = 0.003
+        learning_rate = 1 / iterations
         indices = random.sample(range(0, objects), batch_size)
         total_w = [0] * features
         total_b = 0
@@ -103,23 +165,25 @@ def SGD(X, Y):
         for index in indices:
             x, y_real = X[index], Y[index]
             y_predict = b + scalar_product(w, x)
-            total_loss_value += MSE(y_predict, y_real)
+            total_loss_value += loss_function[0](y_predict, y_real)
+
             # update weights
-            MSE_derivative_value = MSE_derivative(y_predict, y_real)
-            total_b += learning_rate * MSE_derivative_value
+            loss_function_derivative_value = loss_function[1](y_predict, y_real)
+            total_b += learning_rate * loss_function_derivative_value
             for i in range(features):
-                total_w[i] += learning_rate * MSE_derivative_value * x[i]
+                total_w[i] += learning_rate * loss_function_derivative_value * x[i]
 
         loss_value = total_loss_value / batch_size
         b -= total_b / batch_size
         w_previous = w.copy()
         for i in range(features):
             w[i] -= total_w[i] / batch_size
+
         # print("iteration", iterations, "\tloss value =", round(loss_value, 4), "b =", round(b, 4), "\tw =", w)
 
         Q_previous = Q
         Q = (1 - alpha) * Q + alpha * loss_value
-        if iterations == 2000 or (iterations > 10 and are_vectors_similar(w_previous, w) or abs(Q - Q_previous) < 0.00001):
+        if are_vectors_similar(w_previous, w) or abs(Q - Q_previous) < 0.000001:
             break
     return w, b
 
@@ -141,11 +205,9 @@ normalized_Y = normalize_Y(Y)
 # print_X(normalized_X)
 # print("Normalized Y")
 # print(normalized_Y)
-w, b = SGD(X, Y)
-for component in w:
-    print(component)
-print(b)
-# w, b = SGD(normalized_X, normalized_Y)
+normalized_w, normalized_b = SGD(normalized_X, normalized_Y, loss_functions[1])
+w, b = denormalize_weights(normalized_w, normalized_b, minmax_X(X), minmax_Y(Y))
 # print("Result")
 # print("b =", b, "\tw =", w)
 # print("SMAPE =", SMAPE(X, Y, w, b), "%")
+print_answer(w, b)
