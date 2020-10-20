@@ -118,15 +118,16 @@ def f_derivative(y_predict, y_real):
         return 0
 
 
-def vector_length(vector):
+def vector_length(w, b):
     length = 0
-    for component in vector:
+    for component in w:
         length += component ** 2
+    length += b ** 2
     return length ** 0.5
 
 
-def vector_length_squared(vector):
-    return vector_length(vector) ** 2
+def vector_length_squared(w, b):
+    return vector_length(w, b) ** 2
 
 
 loss_functions = {
@@ -135,17 +136,17 @@ loss_functions = {
 }
 
 
-def SGD(X, Y, loss_function, tau=0, max_number_of_iterations=1):
+def SGD(X, Y, loss_function, tau=0, max_number_of_iterations=1000):
     # parameters
     alpha = 0.05
     batch_size = min(1, objects)
 
     # initialisation
+    w, b = initialise_weights()
     Q = 0
     for i in range(objects):
         Q += loss_function[0](scalar_product(w, X[i]), Y[i])
     Q /= objects
-    w, b = initialise_weights()
 
     # finding max value in X
     minmax = minmax_X(X)
@@ -168,16 +169,16 @@ def SGD(X, Y, loss_function, tau=0, max_number_of_iterations=1):
             total_loss_value += loss_function[0](y_predict, y_real)
 
             # update weights
-            loss_function_derivative_value = loss_function[1](y_predict, y_real)
-            total_b += learning_rate * loss_function_derivative_value
+            loss_derivative_value = loss_function[1](y_predict, y_real)
+            total_b += loss_derivative_value
             for i in range(features):
-                total_w[i] += learning_rate * loss_function_derivative_value * x[i]
+                total_w[i] += loss_derivative_value * x[i]
 
-        loss_value = total_loss_value / batch_size
-        b -= total_b / batch_size
+        loss_value = total_loss_value / batch_size + 0.5 * tau * vector_length_squared(w, b)
+        b = b * (1 - learning_rate * tau) - learning_rate * total_b / batch_size
         w_previous = w.copy()
         for i in range(features):
-            w[i] -= total_w[i] / batch_size
+            w[i] = w[i] * (1 - learning_rate * tau) - learning_rate * total_w[i] / batch_size
 
         # print("iteration", iterations, "\tloss value =", round(loss_value, 4), "b =", round(b, 4), "\tw =", w)
 
@@ -209,5 +210,5 @@ normalized_w, normalized_b = SGD(normalized_X, normalized_Y, loss_functions[1])
 w, b = denormalize_weights(normalized_w, normalized_b, minmax_X(X), minmax_Y(Y))
 # print("Result")
 # print("b =", b, "\tw =", w)
-# print("SMAPE =", SMAPE(X, Y, w, b), "%")
+print("SMAPE =", SMAPE(X, Y, w, b), "%")
 print_answer(w, b)
