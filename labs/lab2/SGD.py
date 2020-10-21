@@ -10,11 +10,12 @@ def print_answer(w, b):
 
 def SMAPE(X, Y, w, b):
     result = 0
-    for i in range(objects):
+    for i in range(objects_test):
         y_predict = b + scalar_product(w, X[i])
         y_real = Y[i]
+        print("y_predict =", y_predict, "\ty_real =", y_real)
         result += abs(y_predict - y_real) / (abs(y_predict) + abs(y_real))
-    return result * 200 / objects
+    return result * 200 / objects_test
 
 
 def print_X(X):
@@ -158,7 +159,7 @@ def SGD(X, Y, loss_function, tau=0, max_number_of_iterations=1000):
     iterations = 0
     while iterations < max_number_of_iterations:
         iterations += 1
-        learning_rate = 0.5 / iterations
+        learning_rate = 0.05 / iterations
         indices = random.sample(range(0, objects), batch_size)
         total_w = [0] * features
         total_b = 0
@@ -179,8 +180,6 @@ def SGD(X, Y, loss_function, tau=0, max_number_of_iterations=1000):
         for i in range(features):
             w[i] = w[i] * (1 - learning_rate * tau) - learning_rate * total_w[i] / batch_size
 
-        # print("iteration", iterations, "\tloss value =", round(loss_value, 4), "b =", round(b, 4), "\tw =", w)
-
         Q_previous = Q
         Q = (1 - alpha) * Q + alpha * loss_value
         if are_vectors_similar(w_previous, w) or abs(Q - Q_previous) < 0.000001:
@@ -188,26 +187,50 @@ def SGD(X, Y, loss_function, tau=0, max_number_of_iterations=1000):
     return w, b
 
 
-objects, features = map(int, input().split())
-X = []
-Y = []
-for i in range(objects):
-    line = list(map(int, input().split()))
-    Y.append(line.pop(len(line) - 1))
-    X.append(line)
-normalized_X = normalize_X(X, minmax_X(X))
-normalized_Y = normalize_Y(Y)
-# print("X")
-# print_X(X)
-# print("Y")
-# print(Y)
-# print("Normalized X")
-# print_X(normalized_X)
-# print("Normalized Y")
-# print(normalized_Y)
-normalized_w, normalized_b = SGD(normalized_X, normalized_Y, loss_functions[1])
-w, b = denormalize_weights(normalized_w, normalized_b, minmax_X(X), minmax_Y(Y))
-# print("Result")
-# print("b =", b, "\tw =", w)
-print("SMAPE =", SMAPE(X, Y, w, b), "%")
-print_answer(w, b)
+def remove_constant_features(X):
+    X_new = []
+    for i in range(len(X)):
+        X_new.append(X[i].copy())
+    constant_features = 0
+    for i in range(len(X[0])):
+        is_constant_feature = True
+        for j in range(objects):
+            if X[j][i] != X[0][i]:
+                is_constant_feature = False
+                break
+        if is_constant_feature:
+            for j in range(objects):
+                X_new[j][i] = 0
+                # X_new[j].pop(i - removed_features)
+            X_new[0][i] = 1
+            constant_features += 1
+    return X_new
+
+
+def process_file(filename):
+    with open(filename) as file:
+        features = int(next(file))
+        objects_train = int(next(file))
+        X_train = []
+        Y_train = []
+        for i in range(objects_train):
+            line = [int(x) for x in next(file).split()]
+            Y_train.append(line.pop(len(line) - 1))
+            X_train.append(line)
+        objects_test = int(next(file))
+        X_test = []
+        Y_test = []
+        for i in range(objects_test):
+            line = [int(x) for x in next(file).split()]
+            Y_test.append(line.pop(len(line) - 1))
+            X_test.append(line)
+        return features, objects_train, X_train, Y_train, objects_test, X_test, Y_test
+
+
+features, objects, X_train, Y_train, objects_test, X_test, Y_test = process_file("datasets/7.txt")
+X_train = remove_constant_features(X_train)
+normalized_X_train = normalize_X(X_train, minmax_X(X_train))
+normalized_Y_train = normalize_Y(Y_train)
+normalized_w, normalized_b = SGD(normalized_X_train, normalized_Y_train, loss_functions[1], tau=1, max_number_of_iterations=1000)
+w, b = denormalize_weights(normalized_w, normalized_b, minmax_X(X_train), minmax_Y(Y_train))
+print("SMAPE =", SMAPE(X_test, Y_test, w, b), "%")
