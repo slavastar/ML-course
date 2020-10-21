@@ -43,7 +43,7 @@ def normalize(X, Y):
         Y_normalized[i] = (Y[i] - minmax_Y[0]) / (minmax_Y[1] - minmax_Y[0])
         for j in range(len(X[0])):
             if minmax_X[j][0] == minmax_X[j][1]:
-                X_normalized[i][j] = 1
+                X_normalized[i][j] = 0
             else:
                 X_normalized[i][j] = (X[i][j] - minmax_X[j][0]) / (minmax_X[j][1] - minmax_X[j][0])
     return X_normalized, Y_normalized
@@ -136,11 +136,11 @@ def process_file(filename):
         return X_train, Y_train, X_test, Y_test
 
 
-X_train, Y_train, X_test, Y_test = process_file("datasets/8.txt")
+X_train, Y_train, X_test, Y_test = process_file("datasets/1.txt")
 # optimal_tau_train, optimal_w_train, min_smape_train = find_optimal_tau(X_train, Y_train, LSM)
 # print("optimal tau train =", optimal_tau_train, "\tmin smape train =", min_smape_train)
 # print("smape test =", SMAPE(X_test, Y_test, optimal_w_train))
 X_normalized_train, Y_normalized_train = normalize(X_train, Y_train)
-w = SGD(X_train, Y_train, 0.01)
-# w = denormalize_weights(w, X_train, Y_train)
-print("smape test =", SMAPE(X_train, Y_train, w), "%")
+w_normalized = SGD(X_normalized_train, Y_normalized_train, 0.01)
+w = denormalize_weights(w_normalized, X_train, Y_train)
+print("smape test =", SMAPE(X_normalized_train, Y_normalized_train, w_normalized), "%")
