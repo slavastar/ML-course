@@ -1,5 +1,6 @@
 import numpy as np
 import random
+import copy
 
 
 def scalar_product(a, b):
@@ -14,12 +15,47 @@ def SMAPE(X, Y, w):
     for i in range(len(X)):
         y_predict = scalar_product(X[i], w)
         y_real = Y[i]
+        print("predict =", y_predict, "\treal = ", y_real)
         result += abs(y_predict - y_real) / (abs(y_predict) + abs(y_real))
     return result * 200 / len(X)
 
 
 def LSM(X, Y, tau):
     return np.linalg.pinv(np.add(X.T.dot(X), np.cov(X.T).dot(tau))).dot(X.T).dot(Y)
+
+
+def find_minmax_X(X):
+    minmax = np.zeros((len(X[0]), 2))
+    for i in range(len(X[0])):
+        column = X[:, i]
+        minmax[i] = [column.min(), column.max()]
+    return minmax
+
+
+def find_minmax_Y(Y):
+    return np.array([Y.min(), Y.max()])
+
+
+def normalize(X, Y):
+    X_normalized, Y_normalized = np.zeros(np.shape(X)), np.zeros(np.shape(Y))
+    minmax_X, minmax_Y = find_minmax_X(X), find_minmax_Y(Y)
+    for i in range(len(X)):
+        Y_normalized[i] = (Y[i] - minmax_Y[0]) / (minmax_Y[1] - minmax_Y[0])
+        for j in range(len(X[0])):
+            if minmax_X[j][0] == minmax_X[j][1]:
+                X_normalized[i][j] = 1
+            else:
+                X_normalized[i][j] = (X[i][j] - minmax_X[j][0]) / (minmax_X[j][1] - minmax_X[j][0])
+    return X_normalized, Y_normalized
+
+
+def denormalize_weights(w_normalized, X, Y):
+    w = np.zeros(np.shape(w_normalized))
+    minmax_X, minmax_Y = find_minmax_X(X), find_minmax_Y(Y)
+    x_scale, y_scale = np.amax(minmax_X) - np.amin(minmax_X), np.amax(minmax_Y) - np.amin(minmax_Y)
+    for i in range(len(X[0])):
+        w[i] = w_normalized[i] * y_scale / x_scale
+    return w
 
 
 def MSE(predict, real):
@@ -55,7 +91,7 @@ def SGD(X, Y, tau, iterations_limit=2000):
         x, y = X[k], Y[k]
         predict = scalar_product(x, w)
         loss_value = MSE(predict, y) + 0.5 * tau * np.linalg.norm(w)
-        print("predict =", predict, "real =", y)
+        # print("predict =", predict, "real =", y)
         learning_rate = 0.005
         for i in range(features):
             gradient = MSE_derivative(predict, y) * x[i]
@@ -64,6 +100,7 @@ def SGD(X, Y, tau, iterations_limit=2000):
         Q_previous = Q
         Q = (1 - decay) * Q + decay * loss_value
         if iterations == iterations_limit or abs(Q - Q_previous) < 0.001:
+            print("Total number of iterations =", iterations)
             break
     return w
 
@@ -103,4 +140,7 @@ X_train, Y_train, X_test, Y_test = process_file("datasets/8.txt")
 # optimal_tau_train, optimal_w_train, min_smape_train = find_optimal_tau(X_train, Y_train, LSM)
 # print("optimal tau train =", optimal_tau_train, "\tmin smape train =", min_smape_train)
 # print("smape test =", SMAPE(X_test, Y_test, optimal_w_train))
+X_normalized_train, Y_normalized_train = normalize(X_train, Y_train)
 w = SGD(X_train, Y_train, 0.01)
+# w = denormalize_weights(w, X_train, Y_train)
+print("smape test =", SMAPE(X_train, Y_train, w), "%")
