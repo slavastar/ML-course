@@ -227,7 +227,7 @@ def process_file(filename):
         return features, objects_train, X_train, Y_train, objects_test, X_test, Y_test
 
 
-features, objects, X_train, Y_train, objects_test, X_test, Y_test = process_file("datasets/7.txt")
+features, objects, X_train, Y_train, objects_test, X_test, Y_test = process_file("datasets/3.txt")
 X_train = remove_constant_features(X_train)
 normalized_X_train = normalize_X(X_train, minmax_X(X_train))
 normalized_Y_train = normalize_Y(Y_train)
