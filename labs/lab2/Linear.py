@@ -3,27 +3,6 @@ import random
 from matplotlib import pyplot as plt
 
 
-def scalar_product(a, b):
-    result = 0
-    for i in range(len(a)):
-        result += a[i] * b[i]
-    return result
-
-
-def SMAPE(X, Y, w):
-    result = 0
-    for i in range(len(X)):
-        y_predict = scalar_product(X[i], w)
-        y_real = Y[i]
-        # print("predict =", y_predict, "\treal = ", y_real)
-        result += abs(y_predict - y_real) / (abs(y_predict) + abs(y_real))
-    return result * 200 / len(X)
-
-
-def LSM(X, Y, tau):
-    return np.linalg.pinv(np.add(X.T.dot(X), np.cov(X.T).dot(tau))).dot(X.T).dot(Y)
-
-
 def find_minmax_X(X):
     minmax = np.zeros((len(X[0]), 2))
     for i in range(len(X[0])):
@@ -51,19 +30,24 @@ def normalize(X, Y, with_constant_feature=True):
     return X_normalized, Y_normalized
 
 
-def denormalize_weights(w_normalized, X, Y):
-    w = np.zeros(np.shape(w_normalized))
-    minmax_X, minmax_Y = find_minmax_X(X), find_minmax_Y(Y)
-    y_scale = np.amax(minmax_Y) - np.amin(minmax_Y)
-    w[0] = minmax_Y[0]
-    for i in range(len(X[0])):
-        if minmax_X[i][1] > minmax_X[i][0]:
-            w[0] -= minmax_X[i][0] * w_normalized[i] * y_scale / (minmax_X[i][1] - minmax_X[i][0])
-    for i in range(1, len(X[0])):
-        if minmax_X[i][1] > minmax_X[i][0]:
-            w[i] = w_normalized[i] * y_scale / (minmax_X[i][1] - minmax_X[i][0])
-    w[0] = minmax_Y[0]
-    return w
+def scalar_product(a, b):
+    result = 0
+    for i in range(len(a)):
+        result += a[i] * b[i]
+    return result
+
+
+def SMAPE(X, Y, w):
+    result = 0
+    for i in range(len(X)):
+        y_predict = scalar_product(X[i], w)
+        y_real = Y[i]
+        result += abs(y_predict - y_real) / (abs(y_predict) + abs(y_real))
+    return result * 200 / len(X)
+
+
+def LSM(X, Y, tau):
+    return np.linalg.pinv(np.add(X.T.dot(X), np.cov(X.T).dot(tau))).dot(X.T).dot(Y)
 
 
 def MSE(predict, real):
@@ -99,15 +83,14 @@ def SGD(X, Y, tau, iterations_limit=1000, with_Q_limit=True):
         x, y = X[k], Y[k]
         predict = scalar_product(x, w)
         loss_value = MSE(predict, y) + 0.5 * tau * np.linalg.norm(w)
-        learning_rate = 0.007 / iterations
+        learning_rate = 0.009 / iterations
         for i in range(features):
             gradient = MSE_derivative(predict, y) * x[i]
             w[i] = w[i] * (1 - learning_rate * tau) - learning_rate * gradient
-        decay = 0.035
+        decay = 0.1
         Q_previous = Q
         Q = (1 - decay) * Q + decay * loss_value
         if iterations == iterations_limit or (abs(Q - Q_previous) < 0.000001 and with_Q_limit):
-            print("tau = ", tau, "\tnumber of iterations =", iterations)
             break
     return w
 
@@ -154,7 +137,7 @@ def find_optimal_tau(X, Y, algorithm):
 
 def get_optimal_tau(X_train, Y_train, X_test, Y_test, algorithm):
     optimal_tau_train, optimal_w_train, min_smape_train = find_optimal_tau(X_train, Y_train, algorithm)
-    print("optimal tau =", optimal_tau_train, "\tmin smape train =", min_smape_train)
+    print("optimal tau =", optimal_tau_train)
     print("smape test =", SMAPE(X_test, Y_test, optimal_w_train))
     return optimal_tau_train
 
@@ -171,17 +154,18 @@ def draw_graph(x_values, y_values, x_name, y_name):
     plt.plot(x_values, y_values, 'b')
     plt.xlabel(x_name)
     plt.ylabel(y_name)
+    plt.xscale('log')
     plt.show()
 
 
 algorithm = SGD
-X_train, Y_train, X_test, Y_test = process_file("datasets/1.txt")
+X_train, Y_train, X_test, Y_test = process_file("datasets/5.txt")
 if algorithm == SGD:
     X_train, Y_train, X_test, Y_test = process_dataset_for_SGD(X_train, Y_train, X_test, Y_test)
 optimal_tau = get_optimal_tau(X_train, Y_train, X_test, Y_test, algorithm)
-print(optimal_tau)
 if algorithm == SGD:
-    iterations_limit_values = [100 * i for i in range(1, 21)]
+    iterations_limit_values = [10 * i for i in range(1, 10)]
+    iterations_limit_values.extend([100 * i for i in range(1, 11)])
     smape_values = []
     for iteration_limit_value in iterations_limit_values:
         w = SGD(X_train, Y_train, optimal_tau, iteration_limit_value, False)
