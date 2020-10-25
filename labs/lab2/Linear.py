@@ -138,7 +138,7 @@ def find_optimal_tau(X, Y, algorithm):
 def get_optimal_tau(X_train, Y_train, X_test, Y_test, algorithm):
     optimal_tau_train, optimal_w_train, min_smape_train = find_optimal_tau(X_train, Y_train, algorithm)
     print("optimal tau =", optimal_tau_train)
-    print("smape test =", SMAPE(X_test, Y_test, optimal_w_train))
+    print("smape =", SMAPE(X_test, Y_test, optimal_w_train))
     return optimal_tau_train
 
 
@@ -158,7 +158,7 @@ def draw_graph(x_values, y_values, x_name, y_name):
     plt.show()
 
 
-algorithm = SGD
+algorithm = LSM
 X_train, Y_train, X_test, Y_test = process_file("datasets/5.txt")
 if algorithm == SGD:
     X_train, Y_train, X_test, Y_test = process_dataset_for_SGD(X_train, Y_train, X_test, Y_test)
