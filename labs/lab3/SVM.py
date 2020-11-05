@@ -12,25 +12,25 @@ def print_points(X, Y):
         plt.scatter(X[i][0], X[i][1], marker='o', color=color)
 
 
-def kernel_linear(x, y):
+def linear_kernel(x, y):
     return np.dot(x, y)
 
 
-def kernel_polynomial(x, y, degree):
+def polynomial_kernel(x, y, degree):
     return np.power(1 + np.dot(x, y), degree)
 
 
-def kernel_gaussian(x, y, betta):
+def gaussian_kernel(x, y, betta):
     return np.exp(-betta * np.power(np.linalg.norm(x - y), 2))
 
 
 def get_kernel_function(name, degree=2, betta=1):
     if name == "linear":
-        return lambda x, y: kernel_linear(x, y)
+        return lambda x, y: linear_kernel(x, y)
     elif name == "polynomial":
-        return lambda x, y: kernel_polynomial(x, y, degree)
+        return lambda x, y: polynomial_kernel(x, y, degree)
     else:
-        return lambda x, y: kernel_gaussian(x, y, betta)
+        return lambda x, y: gaussian_kernel(x, y, betta)
 
 
 def find_score(X, Y, kernel_function, C):
@@ -57,7 +57,7 @@ def read_dataset(filename):
     return X, Y
 
 
-def calculate_kernel_matrix(kernel_function, X, Y):
+def find_kernel_matrix(kernel_function, X, Y):
     return np.fromfunction(np.vectorize(lambda i, j: kernel_function(X[i], Y[j])), (X.shape[0], Y.shape[0]), dtype=int)
 
 
@@ -69,17 +69,15 @@ class SVM:
         self.C = C
         self.n = len(X)
         self.kernel_function = kernel_function
-        self.K = self.calculate_kernel_matrix()
+        self.K = self.find_kernel_matrix()
         self.alpha = self.find_alpha()
         self.w = self.find_w()
         self.b = self.find_b()
         self.classifier = self.find_classifier()
 
-    def calculate_kernel_matrix(self):
-        n, *_ = X.shape
-        m, *_ = Y.shape
-        f = lambda i, j: self.kernel_function(X[i], X[j])
-        return np.fromfunction(np.vectorize(f), (n, m), dtype=int)
+    def find_kernel_matrix(self):
+        return np.fromfunction(np.vectorize(lambda i, j: kernel_function(X[i], Y[j])), (X.shape[0], Y.shape[0]),
+                               dtype=int)
 
     def find_alpha(self):
 
@@ -120,20 +118,21 @@ class SVM:
 
     def find_classifier(self):
         def classifier(q):
-            kernel = calculate_kernel_matrix(self.kernel_function, np.array([q]), X)
+            K = find_kernel_matrix(self.kernel_function, np.array([q]), X)
             result = -self.b
             for i in range(self.n):
-                result += self.alpha[i] * self.Y[i] * kernel[0][i]
+                result += self.alpha[i] * self.Y[i] * K[0][i]
             return int(np.sign(result))
 
         return classifier
 
 
 def SGD(X, Y, kernel_function, C):
+
     n = len(X)
     alpha = np.full(n, C / 1000)
     iteration_limit = 500
-    K = calculate_kernel_matrix(kernel_function, X, X)
+    K = find_kernel_matrix(kernel_function, X, X)
     iterations = 0
     real_iterations = 0
     while iterations < iteration_limit:
@@ -180,14 +179,13 @@ def SGD(X, Y, kernel_function, C):
 
     # find classifier
     def classifier(q):
-        kernel = calculate_kernel_matrix(kernel_function, np.array([q]), X)
+        k = find_kernel_matrix(kernel_function, np.array([q]), X)
         result = -b
         for i in range(n):
-            result += alpha[i] * Y[i] * kernel[0][i]
+            result += alpha[i] * Y[i] * k[0][i]
         return int(np.sign(result))
 
     print(alpha)
-
     return classifier
 
 
@@ -200,8 +198,8 @@ def draw(classifier, X, Y):
     x_max += x_delta
     y_min -= y_delta
     y_max += y_delta
-    xx, yy = np.meshgrid(np.arange(x_min, x_max, x_delta), np.arange(y_min, y_max, y_delta))
-    points = np.c_[xx.ravel(), yy.ravel()]
+    x_coordinates, y_coordinates = np.meshgrid(np.arange(x_min, x_max, x_delta), np.arange(y_min, y_max, y_delta))
+    points = np.c_[x_coordinates.ravel(), y_coordinates.ravel()]
     for point in points:
         color = "#e71e52" if classifier(point) == 1 else "orange"
         plt.scatter(point[0], point[1], s=120, color=color)
@@ -269,10 +267,6 @@ def find_best_hyperparameters(X, Y):
 
 X, Y = read_dataset("datasets/chips.csv")
 
-# kernel_function = get_kernel_function("linear")
-# clf = SGD(X, Y, kernel_function, 50)
-# draw(clf, X, Y)
-
 kernel_function = get_kernel_function("linear")
 svm = SVM(X, Y, 50, kernel_function)
 draw(svm.classifier, X, Y)
@@ -284,16 +278,3 @@ draw(svm.classifier, X, Y)
 kernel_function = get_kernel_function("gaussian", betta=5)
 svm = SVM(X, Y, 0.5, kernel_function)
 draw(svm.classifier, X, Y)
-
-
-"""
-chips.csv
-linear: score = 0.667 (C = 5-100)
-polynomial: score = 0.725 (C = 5-100, degree = 2), (0.725, 1, 4)
-gaussian: score = ? (C = 0.5, betta = 5)
-
-geyser.csv
-linear: score = (C = )
-polynomial: score = (C = , degree = )
-gaussian: score = (C = , betta = )
-"""
