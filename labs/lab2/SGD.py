@@ -227,10 +227,12 @@ def process_file(filename):
         return features, objects_train, X_train, Y_train, objects_test, X_test, Y_test
 
 
-features, objects, X_train, Y_train, objects_test, X_test, Y_test = process_file("datasets/3.txt")
+features, objects, X_train, Y_train, objects_test, X_test, Y_test = process_file("datasets/2.txt")
 X_train = remove_constant_features(X_train)
 normalized_X_train = normalize_X(X_train, minmax_X(X_train))
 normalized_Y_train = normalize_Y(Y_train)
 normalized_w, normalized_b = SGD(normalized_X_train, normalized_Y_train, loss_functions[1], tau=1, max_number_of_iterations=1000)
-w, b = denormalize_weights(normalized_w, normalized_b, minmax_X(X_train), minmax_Y(Y_train))
-print("SMAPE =", SMAPE(X_test, Y_test, w, b), "%")
+print(normalized_w)
+print(normalized_b)
+# w, b = denormalize_weights(normalized_w, normalized_b, minmax_X(X_train), minmax_Y(Y_train))
+# print("SMAPE =", SMAPE(X_test, Y_test, w, b), "%")

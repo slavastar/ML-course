@@ -40,7 +40,10 @@ def normalize_X(X, minmax):
     for j in range(len(X)):
         row = []
         for i in range(len(X[0])):
-            row.append(float((X[j][i] - minmax[i][0]) / (minmax[i][1] - minmax[i][0])))
+            if minmax[i][0] == minmax[i][1]:
+                row.append(0)
+            else:
+                row.append(float((X[j][i] - minmax[i][0]) / (minmax[i][1] - minmax[i][0])))
         normalized_X.append(list(row))
     return normalized_X
 
@@ -59,19 +62,19 @@ def normalize_Y(Y):
 
 def denormalize_weights(normalized_w, normalized_b, minmax_X, minmax_Y):
     w = []
-    x_min, x_max = minmax_X[0][0], minmax_X[0][1]
-    for minmax in minmax_X:
-        if x_min > minmax[0]:
-            x_min = minmax[0]
-        if x_max < minmax[1]:
-            x_max = minmax[1]
-    x_scale = x_max - x_min
+    x_scale = []
+    for i in range(len(minmax_X)):
+        x_scale.append(minmax_X[i][1] - minmax_X[i][0])
     y_scale = minmax_Y[1] - minmax_Y[0]
     for i in range(features):
-        w.append(normalized_w[i] * y_scale / x_scale)
-    b = y_scale / x_scale * normalized_b + minmax_Y[0]
+        if x_scale[i] == 0:
+            w.append(0)
+        else:
+            w.append(normalized_w[i] * y_scale / x_scale[i])
+    b = normalized_b + minmax_Y[0]
     for i in range(features):
-        b -= minmax_X[i][0] * y_scale / x_scale * normalized_w[i]
+        if x_scale[i] != 0:
+            b -= minmax_X[i][0] * y_scale / x_scale[i] * normalized_w[i]
     return w, b
 
 
@@ -209,5 +212,4 @@ normalized_w, normalized_b = SGD(normalized_X, normalized_Y, loss_functions[1])
 w, b = denormalize_weights(normalized_w, normalized_b, minmax_X(X), minmax_Y(Y))
 # print("Result")
 # print("b =", b, "\tw =", w)
-print("SMAPE =", SMAPE(X, Y, w, b), "%")
 print_answer(w, b)

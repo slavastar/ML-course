@@ -14,7 +14,7 @@ X = np.vstack((x1, x2)).T
 Y = [0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1]
 
 # define the model
-clf = svm.SVC(kernel='linear', C=1.0)
+clf = svm.SVC(kernel='rbf', C=1.0)
 
 # train the model
 clf.fit(X, Y)
