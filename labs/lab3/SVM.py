@@ -33,18 +33,23 @@ def get_kernel_function(name, degree=2, betta=1):
         return lambda x, y: gaussian_kernel(x, y, betta)
 
 
-def find_score(X, Y, kernel_function, C):
-    splits = 4
+def find_score(X, Y, kernel_function, C, is_geyser=True):
+    splits = 5
     accuracy = 0
     kf = KFold(n_splits=splits)
     for train_indices, test_indices in kf.split(X):
         X_train, X_test = X[train_indices], X[test_indices]
         Y_train, Y_test = Y[train_indices], Y[test_indices]
-        svm = SVM(X_train, Y_train, C, kernel_function)
-        classifier = svm.classifier
+        if is_geyser:
+            classifier = SGD(X, Y, kernel_function, C)
+        else:
+            svm = SVM(X_train, Y_train, C, kernel_function)
+            classifier = svm.classifier
         predictions = np.zeros(len(X_test))
         for i in range(len(X_test)):
             predictions[i] = classifier(X_test[i])
+            if not is_geyser:
+                predictions[i] *= -1
         accuracy += accuracy_score(predictions, Y_test)
     accuracy /= splits
     return accuracy
@@ -69,13 +74,13 @@ class SVM:
         self.C = C
         self.n = len(X)
         self.kernel_function = kernel_function
-        self.K = self.find_kernel_matrix()
+        self.K = self.find_kernel_matrix(kernel_function, X, X)
         self.alpha = self.find_alpha()
         self.w = self.find_w()
         self.b = self.find_b()
         self.classifier = self.find_classifier()
 
-    def find_kernel_matrix(self):
+    def find_kernel_matrix(self, kernel_function, X, Y):
         return np.fromfunction(np.vectorize(lambda i, j: kernel_function(X[i], Y[j])), (X.shape[0], Y.shape[0]),
                                dtype=int)
 
@@ -99,7 +104,7 @@ class SVM:
         constraints = ([{'type': 'eq', 'fun': constraint}])
 
         solution = minimize(objective, alpha, method='SLSQP', \
-                            bounds=bounds, constraints=constraints, tol=1)
+                            bounds=bounds, constraints=constraints)
 
         alpha = solution.x
         return alpha
@@ -113,12 +118,12 @@ class SVM:
     def find_b(self):
         b = 0
         for i in range(self.n):
-            b += self.kernel_function(self.w, X[i]) - Y[i]
+            b += self.kernel_function(self.w, self.X[i]) - self.Y[i]
         return b / self.n
 
     def find_classifier(self):
         def classifier(q):
-            K = find_kernel_matrix(self.kernel_function, np.array([q]), X)
+            K = find_kernel_matrix(self.kernel_function, np.array([q]), self.X)
             result = -self.b
             for i in range(self.n):
                 result += self.alpha[i] * self.Y[i] * K[0][i]
@@ -131,14 +136,14 @@ def SGD(X, Y, kernel_function, C):
 
     n = len(X)
     alpha = np.full(n, C / 1000)
-    iteration_limit = 500
+    iteration_limit = 1000
     K = find_kernel_matrix(kernel_function, X, X)
     iterations = 0
     real_iterations = 0
     while iterations < iteration_limit:
         k = iterations % n
         iterations += 1
-        learning_rate = 10 / iterations
+        learning_rate = 4 / iterations
         alpha_prev = alpha.copy()
         l = np.ones(n)
         for i in range(n - 1):
@@ -157,14 +162,12 @@ def SGD(X, Y, kernel_function, C):
             continue
         real_iterations += 1
 
-    print("real iterations:", real_iterations)
     result = 0
     for i in range(n):
         for j in range(n):
             result -= alpha[i] * alpha[j] * Y[i] * Y[j] * K[i][j]
     result *= -0.5
     result += np.sum(alpha)
-    print(result)
 
     # find w
     w = np.zeros(len(X[0]))
@@ -185,7 +188,6 @@ def SGD(X, Y, kernel_function, C):
             result += alpha[i] * Y[i] * k[0][i]
         return int(np.sign(result))
 
-    print(alpha)
     return classifier
 
 
@@ -207,7 +209,10 @@ def draw(classifier, X, Y):
     plt.show()
 
 
-def find_best_hyperparameters(X, Y):
+def find_best_hyperparameters(dataset_filename):
+    X, Y = read_dataset(dataset_filename)
+    is_geyser = True if dataset_filename == "datasets/geyser.csv" else False
+
     C_values = [0.05, 0.1, 0.5, 1, 5, 10, 50, 100]
     round_digits = 3
 
@@ -217,7 +222,7 @@ def find_best_hyperparameters(X, Y):
     best_linear_hyperparameters = [0]
     kernel_function = get_kernel_function("linear")
     for C in C_values:
-        score = find_score(X, Y, kernel_function, C)
+        score = find_score(X, Y, kernel_function, C, is_geyser)
         print("Score =", round(score, round_digits), "\tC =", C)
         if score >= best_linear_score:
             best_linear_score = score
@@ -234,7 +239,7 @@ def find_best_hyperparameters(X, Y):
     for degree in degree_values:
         kernel_function = get_kernel_function("polynomial", degree=degree)
         for C in C_values:
-            score = find_score(X, Y, kernel_function, C)
+            score = find_score(X, Y, kernel_function, C, is_geyser)
             print("Score =", round(score, round_digits), "\tC =", C, "\tdegree =", degree)
             if score >= best_polynomial_score:
                 best_polynomial_score = score
@@ -252,7 +257,7 @@ def find_best_hyperparameters(X, Y):
     for betta in betta_values:
         kernel_function = get_kernel_function("gaussian", betta=betta)
         for C in C_values:
-            score = find_score(X, Y, kernel_function, C)
+            score = find_score(X, Y, kernel_function, C, is_geyser)
             print("Score =", round(score, round_digits), "\tC =", C, "\tbetta =", betta)
             if score >= best_gaussian_score:
                 best_gaussian_score = score
@@ -264,6 +269,23 @@ def find_best_hyperparameters(X, Y):
 
     return best_linear_hyperparameters, best_polynomial_hyperparameters, best_gaussian_hyperparameters
 
+
+# find_best_hyperparameters("datasets/geyser.csv")
+# find_best_hyperparameters("datasets/chips.csv")
+
+X, Y = read_dataset("datasets/geyser.csv")
+
+kernel_function = get_kernel_function("linear")
+classifier = SGD(X, Y, kernel_function, 0.1)
+draw(classifier, X, Y)
+
+kernel_function = get_kernel_function("polynomial", degree=2)
+classifier = SGD(X, Y, kernel_function, 0.05)
+draw(classifier, X, Y)
+
+kernel_function = get_kernel_function("gaussian", betta=5)
+classifier = SGD(X, Y, kernel_function, 100)
+draw(classifier, X, Y)
 
 X, Y = read_dataset("datasets/chips.csv")
 
@@ -278,3 +300,15 @@ draw(svm.classifier, X, Y)
 kernel_function = get_kernel_function("gaussian", betta=5)
 svm = SVM(X, Y, 0.5, kernel_function)
 draw(svm.classifier, X, Y)
+
+"""
+chips.csv
+linear: score = 0.725, C = 50
+polynomial: score = 0.798, C = 10, degree = 2
+gaussian: score = 0.853, C = 0.5, betta = 5
+
+geyser.csv
+linear: score = 0.743, C = 0.1
+polynomial: score = 0.698, C = 0.05, degree = 2
+gaussian: score = 0.919, C = 100, betta = 5
+"""
