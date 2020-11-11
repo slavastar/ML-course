@@ -270,9 +270,6 @@ def find_best_hyperparameters(dataset_filename):
     return best_linear_hyperparameters, best_polynomial_hyperparameters, best_gaussian_hyperparameters
 
 
-# find_best_hyperparameters("datasets/geyser.csv")
-# find_best_hyperparameters("datasets/chips.csv")
-
 X, Y = read_dataset("datasets/geyser.csv")
 
 kernel_function = get_kernel_function("linear")
