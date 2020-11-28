@@ -1,5 +1,6 @@
 from collections import defaultdict
 from math import log
+from math import exp
 
 
 def get_unique_words_in_message(message):
@@ -46,20 +47,21 @@ def count_conditional_probabilities(n, messages, classes, alpha):
 
 def predict_message(prob, n, number_of_messages_in_classes, message, unique_words_in_messages, lambdas):
     number_of_messages = n
-    prior_prob = [1.0] * (n + 1)
+    prior_prob = [0.0] * (n + 1)
     for cur_class in range(1, n + 1):
-        prior_prob[cur_class] = number_of_messages_in_classes[cur_class] / number_of_messages
-    cond_prob = [1.0] * (n + 1)
+        prior_prob[cur_class] = log(number_of_messages_in_classes[cur_class] / number_of_messages)
+    cond_prob = [0.0] * (n + 1)
     unique_words_in_message = get_unique_words_in_message(message)
     for word in unique_words_in_messages:
         for cur_class in range(1, n + 1):
             if word in unique_words_in_message:
-                cond_prob[cur_class] *= prob[word, cur_class]
+                cond_prob[cur_class] += log(prob[word, cur_class])
             else:
-                cond_prob[cur_class] *= (1 - prob[word, cur_class])
-    total_prob = [1.0] * (n + 1)
+                cond_prob[cur_class] += log(1 - prob[word, cur_class])
+    total_prob = [0.0] * (n + 1)
     for i in range(1, n + 1):
-        total_prob[i] = prior_prob[i] * cond_prob[i] * lambdas[i - 1]
+        total_prob[i] = prior_prob[i] + cond_prob[i] + log(lambdas[i - 1])
+        total_prob[i] = exp(total_prob[i])
     total_prob_sum = sum(total_prob) - total_prob[0]
     for i in range(1, n + 1):
         total_prob[i] /= total_prob_sum
