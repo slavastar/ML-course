@@ -1,5 +1,6 @@
 from math import e, log2, log
 import random
+import numpy as np
 
 
 def print_answer(w, b):
@@ -191,15 +192,24 @@ def SGD(X, Y, loss_function, tau=0, max_number_of_iterations=1000):
     return w, b
 
 
+def LSM(X, Y, tau):
+    return np.linalg.pinv(np.add(X.T.dot(X), np.cov(X.T).dot(tau))).dot(X.T).dot(Y)
+
+
 objects, features = map(int, input().split())
-X = []
-Y = []
+X = np.zeros((objects, features + 1))
+Y = np.zeros(objects)
 for i in range(objects):
     line = list(map(int, input().split()))
-    Y.append(line.pop(len(line) - 1))
-    X.append(line)
-normalized_X = normalize_X(X, minmax_X(X))
-normalized_Y = normalize_Y(Y)
+    # Y.append(line.pop(len(line) - 1))
+    # X.append(line)
+    Y[i] = line.pop()
+    line.append(1)
+    X[i] = line
+w = LSM(X, Y, 1)
+print_answer(w[0:len(w) - 1], w[len(w) - 1])
+# normalized_X = normalize_X(X, minmax_X(X))
+# normalized_Y = normalize_Y(Y)
 # print("X")
 # print_X(X)
 # print("Y")
@@ -208,8 +218,8 @@ normalized_Y = normalize_Y(Y)
 # print_X(normalized_X)
 # print("Normalized Y")
 # print(normalized_Y)
-normalized_w, normalized_b = SGD(normalized_X, normalized_Y, loss_functions[1])
-w, b = denormalize_weights(normalized_w, normalized_b, minmax_X(X), minmax_Y(Y))
+# normalized_w, normalized_b = SGD(normalized_X, normalized_Y, loss_functions[1])
+# w, b = denormalize_weights(normalized_w, normalized_b, minmax_X(X), minmax_Y(Y))
 # print("Result")
 # print("b =", b, "\tw =", w)
-print_answer(w, b)
+# print_answer(w, b)
