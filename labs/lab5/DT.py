@@ -11,10 +11,11 @@ def print_best_hyperparameters(hyperparameters):
 
 
 def read_dataset(dataset_index):
-    train = pd.read_csv('data/{:02d}_train.csv'.format(dataset_index))
+    dataset_index_str = '0' + str(dataset_index) if len(str(dataset_index)) == 1 else dataset_index
+    train = pd.read_csv('data/' + dataset_index_str + '_train.csv'.format(dataset_index))
     X_train = train.iloc[:, :-1].to_numpy()
     Y_train = train.iloc[:, -1].to_numpy()
-    test = pd.read_csv('data/{:02d}_test.csv'.format(dataset_index))
+    test = pd.read_csv('data/' + dataset_index_str + '_test.csv'.format(dataset_index))
     X_test = test.iloc[:, :-1].to_numpy()
     Y_test = test.iloc[:, -1].to_numpy()
     return X_train, Y_train, X_test, Y_test
