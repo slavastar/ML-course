@@ -107,13 +107,14 @@ colors = {
     -1: "black",
     1: "gold",
     2: "orangered",
-    3: "blue",
+    3: "dodgerblue",
     4: "orange",
     5: "red",
     6: "yellow",
     7: "brown",
     8: "magenta",
-    9: "greenyellow"
+    9: "deepskyblue",
+    10:  "greenyellow"
 }
 
 
