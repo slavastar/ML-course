@@ -43,9 +43,10 @@ def find_datasets_with_min_and_max_heights():
         print("Accuracy:", best_accuracy)
 
 
-def draw_graph(dataset_index, x_values, y_values, x_name, y_name, color):
+def draw_graph(dataset_index, x_values, y_values_1, y_values_2, x_name, y_name):
     plt.title("Dataset " + str(dataset_index))
-    plt.plot(x_values, y_values, color=color)
+    plt.plot(x_values, y_values_1, color="#14BDD1")
+    plt.plot(x_values, y_values_2, color="#9C34E0")
     plt.xlabel(x_name)
     plt.ylabel(y_name)
     plt.show()
@@ -53,15 +54,22 @@ def draw_graph(dataset_index, x_values, y_values, x_name, y_name, color):
 
 def build_graph_accuracy_from_depth(dataset_index, criterion, splitter):
     X_train, Y_train, X_test, Y_test = read_dataset(dataset_index)
-    accuracy_values = []
+    accuracy_train_values = []
+    accuracy_test_values = []
     depth_values = [i for i in range(1, 21)]
     for depth in depth_values:
         clf = tree.DecisionTreeClassifier(criterion=criterion, splitter=splitter, max_depth=depth)
         clf.fit(X_train, Y_train)
+
+        prediction = clf.predict(X_train)
+        accuracy_train = np.sum((prediction == Y_train)) / len(Y_train)
+        accuracy_train_values.append(accuracy_train)
+
         prediction = clf.predict(X_test)
-        accuracy = np.sum((prediction == Y_test)) / len(Y_test)
-        accuracy_values.append(accuracy)
-    draw_graph(dataset_index, depth_values, accuracy_values, "depth", "accuracy", "#9C34E0")
+        accuracy_test = np.sum((prediction == Y_test)) / len(Y_test)
+        accuracy_test_values.append(accuracy_test)
+
+    draw_graph(dataset_index, depth_values, accuracy_train_values, accuracy_test_values, "depth", "accuracy")
 
 
 build_graph_accuracy_from_depth(5, criterion="gini", splitter="best")

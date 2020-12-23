@@ -71,7 +71,7 @@ def draw_plot(dataset, feature1N, feature2N, target):
     plt.show()
 
 
-filename = 'iris.csv'
+filename = '../labs/lab7/iris.csv'
 
 dataset = pd.read_csv(filename)
 
