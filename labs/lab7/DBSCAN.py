@@ -100,7 +100,7 @@ def DBSCAN(X, distance_function, eps, min_points):
     return labels
 
 
-def rand(Y_real, Y_predict):
+def rand_index(Y_real, Y_predict):
     TP, FN, FP, TN = 0, 0, 0, 0
     for i in range(len(Y_real)):
         for j in range(len(Y_predict)):
@@ -153,6 +153,9 @@ def print_3D(X, Y, title):
 
 def labels_to_sets(Y):
     sets = []
+    if max(Y) == -1:
+        sets.append(list(Y))
+        return sets
     for i in range(max(Y) + 1):
         sets.append(set())
     for i in range(len(Y)):
@@ -164,15 +167,17 @@ def labels_to_sets(Y):
 
 
 def min_separation(X, clusters, distance_function):
-    min_distance = 2 ** 31
+    value = 10000000
+    min_distance = value
     for i in range(1, len(clusters)):
         for j in range(1, len(clusters)):
             if i != j:
                 for first in clusters[i]:
                     for second in clusters[j]:
-                        if distance_function(list(X[first]), list(X[second])) < min_distance:
-                            min_distance = distance_function(list(X[first]), list(X[second]))
-    return min_distance
+                        distance = distance_function(list(X[first]), list(X[second]))
+                        if distance < min_distance:
+                            min_distance = distance
+    return min_distance if min_distance != value else 0
 
 
 def max_diameter(X, clusters, distance_function):
@@ -188,6 +193,8 @@ def max_diameter(X, clusters, distance_function):
 def dunn_index(X, Y, distance_function):
     clusters = labels_to_sets(Y)
     min_sep = min_separation(X, clusters, distance_function)
+    if min_sep == 0:
+        return 0
     max_diam = max_diameter(X, clusters, distance_function)
     return min_sep / max_diam
 
@@ -209,20 +216,42 @@ distance_mapping = {
 }
 
 
+def draw_graph(x_values, y_values, x_name, y_name):
+    plt.plot(x_values, y_values, 'b')
+    plt.xlabel(x_name)
+    plt.ylabel(y_name)
+    plt.show()
+
+
+def draw_graphs(X, Y_real, distance_function, min_points):
+    eps_values = [0.1 * i for i in range(1, 10)]
+    rand_values = []
+    dunn_values = []
+    for eps in eps_values:
+        Y_predict = DBSCAN(X, distance_function, eps, min_points)
+        rand_values.append(rand_index(Y_real, Y_predict))
+        dunn_values.append(dunn_index(X, Y_predict, distance_function))
+    draw_graph(eps_values, rand_values, "eps", "rand")
+    draw_graph(eps_values, dunn_values, "eps", "dunn")
+
+
 filename = "wine.csv"
 X, Y_real = read_dataset(filename)
 X = normalize(X)
-eps = 0.405
-min_points = 4
 distance = "euclidean"
+
+min_points = 7
+eps = 0.51
 distance_function = distance_mapping[distance]
 Y_predict = DBSCAN(X, distance_function, eps, min_points)
-rand_value = rand(Y_real, Y_predict)
+rand_value = rand_index(Y_real, Y_predict)
 dunn_value = dunn_index(X, Y_predict, distance_function)
 print("Rand Index: {}".format(round(rand_value, 3)))
 print("Dunn Index: {}".format(round(dunn_value, 3)))
 print("Number of classes: {}".format(max(Y_predict)))
 print("Real:   ", list(Y_real))
 print("Predict:", Y_predict)
-# plot(X, Y_real, "{}: real".format(filename))
-# plot(X, Y_predict, "{}: eps = {}, M = {}, {}".format(filename, eps, min_points, distance))
+plot(X, Y_real, "{}: real".format(filename))
+plot(X, Y_predict, "{}: eps = {}, M = {}, {}".format(filename, eps, min_points, distance))
+
+draw_graphs(X, Y_real, distance_function, min_points=4)
