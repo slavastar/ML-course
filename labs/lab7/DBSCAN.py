@@ -14,6 +14,21 @@ def read_dataset(filename):
     return X, Y
 
 
+def vectorize(X):
+    pass
+
+
+def vectorize_dataset(X):
+    objects = len(X)
+    features = len(X[0])
+    for i in range(features):
+        current_features = 0
+        features_mapping = {}
+        for j in range(objects):
+            if X[i][j]:
+                pass
+
+
 def reorder(in_file, out_file):
     with open(in_file, 'r', newline='') as in_file_handle:
         reader = csv.reader(in_file_handle)
@@ -56,8 +71,7 @@ def find_neighboors(X, j, distance_function, eps):
     return N
 
 
-def DBSCAN(X, distance_str, eps, min_points):
-    distance_function = distance_mapping[distance_str]
+def DBSCAN(X, distance_function, eps, min_points):
     NOISE = -1
     UNDEFINED = 0
     objects = len(X)
@@ -137,6 +151,47 @@ def print_3D(X, Y, title):
     plt.show()
 
 
+def labels_to_sets(Y):
+    sets = []
+    for i in range(max(Y) + 1):
+        sets.append(set())
+    for i in range(len(Y)):
+        if Y[i] == -1:
+            sets[0].add(i)
+        else:
+            sets[Y[i]].add(i)
+    return sets
+
+
+def min_separation(X, clusters, distance_function):
+    min_distance = 2 ** 31
+    for i in range(1, len(clusters)):
+        for j in range(1, len(clusters)):
+            if i != j:
+                for first in clusters[i]:
+                    for second in clusters[j]:
+                        if distance_function(list(X[first]), list(X[second])) < min_distance:
+                            min_distance = distance_function(list(X[first]), list(X[second]))
+    return min_distance
+
+
+def max_diameter(X, clusters, distance_function):
+    max_distance = 0
+    for i in range(1, len(clusters)):
+        for first in clusters[i]:
+            for second in clusters[i]:
+                if first != second and distance_function(list(X[first]), list(X[second])) > max_distance:
+                    max_distance = distance_function(list(X[first]), list(X[second]))
+    return max_distance
+
+
+def dunn_index(X, Y, distance_function):
+    clusters = labels_to_sets(Y)
+    min_sep = min_separation(X, clusters, distance_function)
+    max_diam = max_diameter(X, clusters, distance_function)
+    return min_sep / max_diam
+
+
 def plot(X, Y, title):
     for n in [2, 3]:
         pca = PCA(n_components=n)
@@ -160,11 +215,14 @@ X = normalize(X)
 eps = 0.405
 min_points = 4
 distance = "euclidean"
-Y_predict = DBSCAN(X, distance, eps, min_points)
-res = rand(Y_real, Y_predict)
-print("Rand Index: {}".format(round(res, 3)))
+distance_function = distance_mapping[distance]
+Y_predict = DBSCAN(X, distance_function, eps, min_points)
+rand_value = rand(Y_real, Y_predict)
+dunn_value = dunn_index(X, Y_predict, distance_function)
+print("Rand Index: {}".format(round(rand_value, 3)))
+print("Dunn Index: {}".format(round(dunn_value, 3)))
 print("Number of classes: {}".format(max(Y_predict)))
 print("Real:   ", list(Y_real))
 print("Predict:", Y_predict)
-plot(X, Y_real, "{}: real".format(filename))
-plot(X, Y_predict, "{}: eps = {}, M = {}, {}".format(filename, eps, min_points, distance))
+# plot(X, Y_real, "{}: real".format(filename))
+# plot(X, Y_predict, "{}: eps = {}, M = {}, {}".format(filename, eps, min_points, distance))
