@@ -1,7 +1,7 @@
 # ML-course
 Machine Learning course at ITMO University
 
-The repository contains algorithms folder which has the following files implementing the algoriths below:
+The repository contains algorithms folder which has the following files implementing the algorithms below:
 
 * kNN.py - kNN Algorithm
 * Linear.py - Linear Regression
