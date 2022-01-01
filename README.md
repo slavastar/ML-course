@@ -1,7 +1,7 @@
 # ML-course
-Machine Learning course at ITMO University
+🤖 Machine Learning course at ITMO University
 
-The repository contains algorithms folder which has the following files implementing the algorithms below:
+<img src="https://www.wallpapertip.com/wmimgs/173-1734381_techsilva-images-machine-learning-hd-wallpaper-and-machine.jpg">
 
 | Lab |  Description |  Problem | Implementation |
 |:---:|:--------------------------:|:------------------------:|:---------:|
