@@ -3,7 +3,8 @@
 
 Course lectures: [YouTube](https://www.youtube.com/playlist?list=PLI83Pf8BmFleR6_uxlP7o3ojU1BG2sUJz)
 
-<img src="https://www.wallpapertip.com/wmimgs/173-1734381_techsilva-images-machine-learning-hd-wallpaper-and-machine.jpg">
+<img width="1125" alt="image" src="https://user-images.githubusercontent.com/42523164/197007942-e98d9439-3e36-4a14-8ca2-901143af0e83.png">
+
 
 | Lab |  Description |  Problem | Implementation |
 |:---:|:--------------------------:|:------------------------:|:---------:|
