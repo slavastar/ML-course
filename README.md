@@ -1,6 +1,8 @@
 # ML-course
 🤖 Machine Learning course at ITMO University
 
+Course lectures: [YouTube](https://www.youtube.com/playlist?list=PLI83Pf8BmFleR6_uxlP7o3ojU1BG2sUJz)
+
 <img src="https://www.wallpapertip.com/wmimgs/173-1734381_techsilva-images-machine-learning-hd-wallpaper-and-machine.jpg">
 
 | Lab |  Description |  Problem | Implementation |
