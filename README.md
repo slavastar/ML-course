@@ -1,11 +1,13 @@
 # ML-course
-🤖 Machine Learning course at ITMO University
+**Machine Learning course at ITMO University**
 
+<img width="1019" alt="image" src="https://user-images.githubusercontent.com/42523164/197012596-319ae220-0b24-4d68-a84b-cdddb2291fe8.png">
+
+## Lectures
 Course lectures: [YouTube](https://www.youtube.com/playlist?list=PLI83Pf8BmFleR6_uxlP7o3ojU1BG2sUJz)
 
-<img width="1125" alt="image" src="https://user-images.githubusercontent.com/42523164/197007942-e98d9439-3e36-4a14-8ca2-901143af0e83.png">
 
-
+## Assignments
 | Lab |  Description |  Problem | Implementation |
 |:---:|:--------------------------:|:------------------------:|:---------:|
 |  1  | Data normalization, One-hot Encoding, kNN Classifier, Nonparametric Regression, cross-validation, hyperparameter tuning | [kNN.pdf](https://github.com/slavafive/ML-course/blob/master/problems/kNN.pdf) | [kNN.py](https://github.com/slavafive/ML-course/blob/master/labs/kNN.py) |
