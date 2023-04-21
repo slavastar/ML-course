@@ -1,5 +1,5 @@
 # ML-course
-**Machine Learning course at ITMO University**
+🎓 **Machine Learning course at ITMO University**
 
 <img width="1019" alt="image" src="https://user-images.githubusercontent.com/42523164/197012596-319ae220-0b24-4d68-a84b-cdddb2291fe8.png">
 
